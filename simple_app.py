@@ -5,7 +5,7 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     qa = [
-        {"question": "What experience do you have with Microsoft Active Directory?", "answer": "I have extensive experience managing Active Directory environments, including user management, group policies, and integration with other systems."},
+        {"question": "What experience do you have with Microsoft Active Directory?", "answer": "I have extensive experience managing Active Directory environments, including user management, group policies, and overall object management"},
         {"question": "Can you explain the difference between a domain and a workgroup in Windows networking?", "answer": "A domain is a centralized network structure managed by a server (Domain Controller), while a workgroup is a decentralized network structure where each computer is managed independently."},
         {"question": "How do you troubleshoot network connectivity issues?", "answer": "To troubleshoot network connectivity issues, I start by checking the physical connections, then I verify the network configuration, and use tools like ping, tracert, and nslookup to diagnose the problem."},
         {"question": "What is a DHCP server, and how does it work?", "answer": "A DHCP server automatically assigns IP addresses to devices on a network. It reduces manual configuration and helps manage IP address allocation efficiently."},
