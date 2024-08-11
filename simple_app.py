@@ -33,10 +33,10 @@ def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Enduro SRE Test</title>
+        <title>EnduroSAT SRE Test</title>
     </head>
     <body>
-        <h1>Enduro SRE Test</h1>
+        <h1>EnduroSAT SRE Test</h1>
         <ol>
         {% for item in qa %}
             <li><strong>{{ item.question }}</strong><br>
