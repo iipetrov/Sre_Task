@@ -2,69 +2,56 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'docker-credentials-id'  // Вашите Docker Hub креденциали
-        REGISTRY = 'docker.io'  // Може да се замени с вашия Docker хранилище
-        IMAGE_NAME = 'flask-app'
-        IMAGE_TAG = 'latest'
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id') // Replace with your Docker Hub credentials ID
+        DOCKER_IMAGE = "<твоето-потребителско-име>/simple-web-app:${env.BUILD_NUMBER}"
+        KUBE_CONFIG = credentials('kube-config') // Replace with your Kubernetes credentials ID
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone repository') {
             steps {
-                // Клонирайте кода от GitHub
-                checkout scm
+                git branch: 'main', url: 'https://github.com/your-repo/simple-web-app.git' // Replace with your GitHub repo URL
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Изграждане на Docker образа
-                    docker.build("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+                    docker.build(DOCKER_IMAGE)
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Test Container') {
             steps {
                 script {
-                    // Логнете се в Docker хранилището
-                    docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIALS_ID}") {
-                        // Натоварете Docker образа
-                        docker.image("${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}").push()
+                    docker.image(DOCKER_IMAGE).inside {
+                        sh 'python simple_app.py & sleep 5'
+                        sh 'curl http://localhost:5000'
                     }
                 }
             }
         }
 
-        stage('Deploy to Staging') {
+        stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Деплойте приложението на Kubernetes
-                    sh 'kubectl apply -f k8s/deployment.yaml'
-                    sh 'kubectl apply -f k8s/service.yaml'
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_HUB_CREDENTIALS) {
+                        docker.image(DOCKER_IMAGE).push()
+                    }
                 }
             }
         }
 
-        stage('Run Tests') {
+        stage('Deploy to K3s') {
             steps {
                 script {
-                    // Стартирайте тестовете
-                    sh 'curl -f http://flask-app-service:80/test'  // Примерен тест чрез HTTP заявка
-                }
-            }
-        }
-
-        stage('Deploy to Production') {
-            when {
-                expression { return currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                script {
-                    // Деплойте приложението на Kubernetes в продукционна среда
-                    sh 'kubectl apply -f k8s/production-deployment.yaml'
-                    sh 'kubectl apply -f k8s/production-service.yaml'
+                    withKubeConfig([credentialsId: 'kube-config']) {
+                        sh """
+                        kubectl set image deployment/simple-web-app simple-web-app=${DOCKER_IMAGE} --namespace=default
+                        kubectl rollout status deployment/simple-web-app --namespace=default
+                        """
+                    }
                 }
             }
         }
@@ -72,10 +59,10 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline успешно завършен.'
+            echo 'Deployment successful!'
         }
         failure {
-            echo 'Pipeline неуспешен.'
+            echo 'Deployment failed.'
         }
     }
 }
