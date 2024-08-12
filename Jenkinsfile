@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('3033') 
+        DOCKER_HUB_CREDENTIALS = credentials('3003') 
         DOCKER_IMAGE = "iliyapetrov/simple-web-app:${env.BUILD_NUMBER}"
-        KUBE_CONFIG = credentials('0b8fffb2-bc5c-4200-aced-59e7405341ce') 
+        KUBE_CONFIG = credentials('502') 
     }
 
     stages {
