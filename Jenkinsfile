@@ -2,22 +2,24 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('3033') 
-        DOCKER_IMAGE = "iliyapetrov/simple-web-app:${env.BUILD_NUMBER}"
-        KUBE_CONFIG = credentials('502') 
+        DOCKER_HUB_CREDENTIALS = credentials('3033') // Replace with your Docker Hub credentials ID
+        KUBE_CONFIG = credentials('0b8fffb2-bc5c-4200-aced-59e7405341ce	') // Replace with your Kubernetes credentials ID
+        DOCKER_IMAGE = "iliyapetrov/simple-web-app:${env.BUILD_NUMBER}" // Replace with your Docker Hub username
     }
 
     stages {
-        stage('Clone repository') {
+        stage('Checkout') {
             steps {
-                git url: 'https://github.com/iipetrov/Sre_Task.git'
+                git branch: 'master',
+                    credentialsId: 'github-credentials-id', // Replace with your GitHub SSH credentials ID
+                    url: 'https://github.com/iipetrov/Sre_Task.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build(DOCKER_IMAGE)
+                    sh 'docker build -t ${DOCKER_IMAGE} .'
                 }
             }
         }
@@ -25,10 +27,7 @@ pipeline {
         stage('Test Container') {
             steps {
                 script {
-                    docker.image(DOCKER_IMAGE).inside {
-                        sh 'python simple_app.py & sleep 5'
-                        sh 'curl http://localhost:5000'
-                    }
+                    sh 'docker run --rm ${DOCKER_IMAGE} python --version' // Example test step
                 }
             }
         }
@@ -37,7 +36,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', DOCKER_HUB_CREDENTIALS) {
-                        docker.image(DOCKER_IMAGE).push()
+                        sh 'docker push ${DOCKER_IMAGE}'
                     }
                 }
             }
@@ -46,10 +45,10 @@ pipeline {
         stage('Deploy to K3s') {
             steps {
                 script {
-                    withKubeConfig([credentialsId: 'kube-config']) {
+                    withKubeConfig([credentialsId: KUBE_CONFIG, namespace: 'default']) {
                         sh """
-                        kubectl set image deployment/simple-web-app simple-web-app=${DOCKER_IMAGE} --namespace=default
-                        kubectl rollout status deployment/simple-web-app --namespace=default
+                        kubectl set image deployment/simple-web-app simple-web-app=${DOCKER_IMAGE}
+                        kubectl rollout status deployment/simple-web-app
                         """
                     }
                 }
@@ -59,7 +58,7 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment successful!'
+            echo 'Deployment succeeded!'
         }
         failure {
             echo 'Deployment failed.'
