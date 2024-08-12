@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone repository') {
             steps {
-                git url: 'https://github.com/iipetrov/Sre_Task.git'
+                git url: 'git@github.com:iipetrov/Sre_Task.git'
             }
         }
 
