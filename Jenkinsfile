@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id') // Replace with your Docker Hub credentials ID
-        DOCKER_IMAGE = "<твоето-потребителско-име>/simple-web-app:${env.BUILD_NUMBER}"
-        KUBE_CONFIG = credentials('kube-config') // Replace with your Kubernetes credentials ID
+        DOCKER_HUB_CREDENTIALS = credentials('3033') 
+        DOCKER_IMAGE = "iliyapetrov/simple-web-app:${env.BUILD_NUMBER}"
+        KUBE_CONFIG = credentials('0b8fffb2-bc5c-4200-aced-59e7405341ce') 
     }
 
     stages {
         stage('Clone repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-repo/simple-web-app.git' // Replace with your GitHub repo URL
+                git branch: 'main', url: 'https://github.com/iipetrov/Sre_Task.git 
             }
         }
 
