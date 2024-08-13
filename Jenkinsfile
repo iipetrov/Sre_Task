@@ -1,21 +1,45 @@
 pipeline {
-    agent any
-
-    environment {
-        DOCKER_HUB_CREDENTIALS = credentials('3033') // Replace with your Docker Hub credentials ID
-        KUBE_CONFIG = credentials('0b8fffb2-bc5c-4200-aced-59e7405341ce	') // Replace with your Kubernetes credentials ID
-        DOCKER_IMAGE = "iliyapetrov/simple-web-app:${env.BUILD_NUMBER}" // Replace with your Docker Hub username
+    agent {
+        kubernetes {
+            label 'kubernetes-agent'
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            spec:
+              containers:
+              - name: docker
+                image: docker:latest
+                command:
+                - cat
+                tty: true
+                volumeMounts:
+                - name: docker-socket
+                  mountPath: /var/run/docker.sock
+              - name: kubectl
+                image: bitnami/kubectl:latest
+                command:
+                - cat
+                tty: true
+              volumes:
+              - name: docker-socket
+                hostPath:
+                  path: /var/run/docker.sock
+            """
+        }
     }
-
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('DockerHub')
+        GIT_CREDENTIALS = credentials('GitHub')
+        KUBECONFIG_CREDENTIALS = credentials('k3s')
+        DOCKER_IMAGE = "iliqpetrov/myapp:latest" // Заменете с вашето Docker Hub изображение
+        GIT_REPO = "git@github.com:yourusername/yourrepo.git" // Заменете с вашето GitHub репо
+    }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master',
-                    credentialsId: 'github-credentials-id', // Replace with your GitHub SSH credentials ID
-                    url: 'https://github.com/iipetrov/Sre_Task.git'
+                git branch: 'main', credentialsId: 'GitHub', url: "${GIT_REPO}"
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -23,45 +47,56 @@ pipeline {
                 }
             }
         }
-
-        stage('Test Container') {
+        stage('Deploy to K3s for Testing') {
             steps {
-                script {
-                    sh 'docker run --rm ${DOCKER_IMAGE} python --version' // Example test step
+                container('kubectl') {
+                    script {
+                        sh '''
+                        echo "${KUBECONFIG_CREDENTIALS}" > kubeconfig
+                        export KUBECONFIG=kubeconfig
+                        kubectl apply -f deployment.yaml
+                        '''
+                    }
                 }
             }
         }
-
+        stage('Run Automated Tests') {
+            steps {
+                // Заменете с вашите тестове
+                script {
+                    sh 'python -m unittest discover -s tests'
+                }
+            }
+        }
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_HUB_CREDENTIALS) {
+                    docker.withRegistry('', 'DockerHub') {
                         sh 'docker push ${DOCKER_IMAGE}'
                     }
                 }
             }
         }
-
-        stage('Deploy to K3s') {
+        stage('Deploy to Production') {
             steps {
-                script {
-                    withKubeConfig([credentialsId: KUBE_CONFIG, namespace: 'default']) {
-                        sh """
-                        kubectl set image deployment/simple-web-app simple-web-app=${DOCKER_IMAGE}
-                        kubectl rollout status deployment/simple-web-app
-                        """
+                container('kubectl') {
+                    script {
+                        sh '''
+                        echo "${KUBECONFIG_CREDENTIALS}" > kubeconfig
+                        export KUBECONFIG=kubeconfig
+                        kubectl set image deployment/myapp myapp=${DOCKER_IMAGE} --record
+                        '''
                     }
                 }
             }
         }
     }
-
     post {
         success {
-            echo 'Deployment succeeded!'
+            echo 'Pipeline completed successfully!'
         }
         failure {
-            echo 'Deployment failed.'
+            echo 'Pipeline failed.'
         }
     }
 }
