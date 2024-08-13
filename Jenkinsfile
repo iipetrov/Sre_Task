@@ -1,38 +1,13 @@
 pipeline {
     agent {
-        kubernetes {
-            label 'kubernetes-agent'
-            yaml """
-            apiVersion: v1
-            kind: Pod
-            spec:
-              containers:
-              - name: docker
-                image: docker:latest
-                command:
-                - cat
-                tty: true
-                volumeMounts:
-                - name: docker-socket
-                  mountPath: /var/run/docker.sock
-              - name: kubectl
-                image: bitnami/kubectl:latest
-                command:
-                - cat
-                tty: true
-              volumes:
-              - name: docker-socket
-                hostPath:
-                  path: /var/run/docker.sock
-            """
-        }
+        label 'kubernetes-agent' 
     }
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('DockerHub')
-        GIT_CREDENTIALS = credentials('GitHub')
-        KUBECONFIG_CREDENTIALS = credentials('k3s')
-        DOCKER_IMAGE = "iliqpetrov/myapp:latest" // Заменете с вашето Docker Hub изображение
-        GIT_REPO = "git@github.com:yourusername/yourrepo.git" // Заменете с вашето GitHub репо
+        DOCKERHUB_CREDENTIALS = credentials('DockerHub') 
+        GIT_CREDENTIALS = credentials('GitHub') 
+        KUBECONFIG_CREDENTIALS = credentials('k3s') 
+        DOCKER_IMAGE = "iliqpetrov/simple_app:latest" 
+        GIT_REPO = "https://github.com/iipetrov/Sre_Task.git"
     }
     stages {
         stage('Checkout') {
@@ -49,14 +24,12 @@ pipeline {
         }
         stage('Deploy to K3s for Testing') {
             steps {
-                container('kubectl') {
-                    script {
-                        sh '''
-                        echo "${KUBECONFIG_CREDENTIALS}" > kubeconfig
-                        export KUBECONFIG=kubeconfig
-                        kubectl apply -f deployment.yaml
-                        '''
-                    }
+                script {
+                    sh '''
+                    echo "${KUBECONFIG_CREDENTIALS}" > kubeconfig
+                    export KUBECONFIG=kubeconfig
+                    kubectl apply -f deployment.yaml
+                    '''
                 }
             }
         }
@@ -79,14 +52,12 @@ pipeline {
         }
         stage('Deploy to Production') {
             steps {
-                container('kubectl') {
-                    script {
-                        sh '''
-                        echo "${KUBECONFIG_CREDENTIALS}" > kubeconfig
-                        export KUBECONFIG=kubeconfig
-                        kubectl set image deployment/myapp myapp=${DOCKER_IMAGE} --record
-                        '''
-                    }
+                script {
+                    sh '''
+                    echo "${KUBECONFIG_CREDENTIALS}" > kubeconfig
+                    export KUBECONFIG=kubeconfig
+                    kubectl set image deployment/myapp myapp=${DOCKER_IMAGE} --record
+                    '''
                 }
             }
         }
